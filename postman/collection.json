@@ -1,0 +1,560 @@
+{
+  "info": {
+    "_postman_id": "d1a2b3c4-e5f6-7890-abcd-ef1234567890",
+    "name": "Digital Art Gallery Management System",
+    "description": "Complete Postman collection for the Digital Art Gallery Management System REST API. Set the `token` collection variable after login to authenticate protected requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "artistId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "artworkId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "exhibitionId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Admin User\",\n  \"email\": \"admin@gallery.com\",\n  \"password\": \"admin123\",\n  \"role\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Register a new user. Role can be 'admin', 'artist', or 'user'."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "  console.log('Token saved to collection variable.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@gallery.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login with email and password. The token is automatically saved to the collection variable on success."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Artists",
+      "item": [
+        {
+          "name": "Create Artist",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"artistName\": \"Leonardo DiVinci\",\n  \"specialization\": \"Digital Painting\",\n  \"bio\": \"A passionate digital artist with over 10 years of experience in creating breathtaking digital paintings and illustrations.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/artists",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artists"]
+            },
+            "description": "Create an artist profile for the authenticated user. Requires 'admin' or 'artist' role."
+          }
+        },
+        {
+          "name": "Get All Artists",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/artists",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artists"]
+            },
+            "description": "Retrieve all artist profiles."
+          }
+        },
+        {
+          "name": "Get Artist By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/artists/{{artistId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artists", "{{artistId}}"]
+            },
+            "description": "Retrieve a single artist by their ID."
+          }
+        },
+        {
+          "name": "Update Artist",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"artistName\": \"Leonardo DiVinci Updated\",\n  \"specialization\": \"3D Digital Art\",\n  \"bio\": \"An experienced 3D digital artist specializing in immersive environments and character design.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/artists/{{artistId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artists", "{{artistId}}"]
+            },
+            "description": "Update an artist profile. Artists can only update their own profile; admins can update any."
+          }
+        },
+        {
+          "name": "Delete Artist",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/artists/{{artistId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artists", "{{artistId}}"]
+            },
+            "description": "Delete an artist profile. Admin only."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Artworks",
+      "item": [
+        {
+          "name": "Create Artwork",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Sunset Dreams\",\n  \"description\": \"A vibrant sunset painting capturing the golden hues of twilight over the ocean.\",\n  \"price\": 1500,\n  \"category\": \"{{categoryId}}\",\n  \"artistId\": \"{{artistId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/artworks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artworks"]
+            },
+            "description": "Create a new artwork. Requires 'admin' or 'artist' role."
+          }
+        },
+        {
+          "name": "Get All Artworks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/artworks?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artworks"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Get all artworks with pagination."
+          }
+        },
+        {
+          "name": "Search Artworks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/artworks?search=sunset",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artworks"],
+              "query": [
+                { "key": "search", "value": "sunset" }
+              ]
+            },
+            "description": "Search artworks by title (case-insensitive)."
+          }
+        },
+        {
+          "name": "Filter Artworks By Category",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/artworks?category={{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artworks"],
+              "query": [
+                { "key": "category", "value": "{{categoryId}}" }
+              ]
+            },
+            "description": "Filter artworks by category ID."
+          }
+        },
+        {
+          "name": "Get Artwork By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/artworks/{{artworkId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artworks", "{{artworkId}}"]
+            },
+            "description": "Get a single artwork by ID with full populated data."
+          }
+        },
+        {
+          "name": "Update Artwork",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Sunset Dreams - Revised Edition\",\n  \"price\": 2000,\n  \"description\": \"An updated and more detailed depiction of a coastal sunset.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/artworks/{{artworkId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artworks", "{{artworkId}}"]
+            },
+            "description": "Update artwork fields. Artists can only update their own artworks."
+          }
+        },
+        {
+          "name": "Delete Artwork",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/artworks/{{artworkId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artworks", "{{artworkId}}"]
+            },
+            "description": "Delete an artwork. Admin only."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryName\": \"Digital Art\",\n  \"description\": \"Artwork created using digital tools such as Photoshop, Illustrator, or 3D software.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories"]
+            },
+            "description": "Create a new artwork category. Admin only."
+          }
+        },
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories"]
+            },
+            "description": "Retrieve all categories."
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryName\": \"Digital Painting\",\n  \"description\": \"Digital paintings created using raster-based tools with painterly styles.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories", "{{categoryId}}"]
+            },
+            "description": "Update a category. Admin only."
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories", "{{categoryId}}"]
+            },
+            "description": "Delete a category. Admin only."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Exhibitions",
+      "item": [
+        {
+          "name": "Create Exhibition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exhibitionName\": \"Modern Digital Era\",\n  \"startDate\": \"2025-08-01\",\n  \"endDate\": \"2025-08-31\",\n  \"artworkIds\": [\"{{artworkId}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/exhibitions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exhibitions"]
+            },
+            "description": "Create a new exhibition. Admin only. All artworkIds must exist."
+          }
+        },
+        {
+          "name": "Get All Exhibitions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/exhibitions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exhibitions"]
+            },
+            "description": "Retrieve all exhibitions with populated artwork details."
+          }
+        },
+        {
+          "name": "Update Exhibition",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exhibitionName\": \"Modern Digital Era - Extended\",\n  \"endDate\": \"2025-09-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/exhibitions/{{exhibitionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exhibitions", "{{exhibitionId}}"]
+            },
+            "description": "Update an exhibition. Admin only."
+          }
+        },
+        {
+          "name": "Delete Exhibition",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/exhibitions/{{exhibitionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exhibitions", "{{exhibitionId}}"]
+            },
+            "description": "Delete an exhibition. Admin only."
+          }
+        }
+      ]
+    }
+  ]
+}
