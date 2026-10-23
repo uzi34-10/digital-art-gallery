@@ -5,14 +5,35 @@ const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN }
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };
 
 const register = async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, adminSecret } = req.body;
 
+    // 1. Role escalation safeguard - verified before hitting database
+    let assignedRole = 'user';
+    if (role === 'artist') {
+      assignedRole = 'artist';
+    } else if (role === 'admin') {
+      const validAdminSecret = process.env.ADMIN_REGISTRATION_SECRET;
+      const isAdminAuthorized =
+        (validAdminSecret && adminSecret === validAdminSecret) ||
+        (req.user && req.user.role === 'admin');
+
+      if (!isAdminAuthorized) {
+        const error = new Error(
+          'Unauthorized: Admin role registration requires valid authorization credentials.'
+        );
+        error.statusCode = 403;
+        return next(error);
+      }
+      assignedRole = 'admin';
+    }
+
+    // 2. Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       const error = new Error('A user with this email already exists.');
@@ -20,7 +41,12 @@ const register = async (req, res, next) => {
       return next(error);
     }
 
-    const user = await User.create({ name, email, password, role });
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: assignedRole,
+    });
 
     const token = generateToken(user);
 
@@ -49,14 +75,14 @@ const login = async (req, res, next) => {
 
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      const error = new Error('Invalid credentials.');
+      const error = new Error('Invalid email or password.');
       error.statusCode = 401;
       return next(error);
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      const error = new Error('Invalid credentials.');
+      const error = new Error('Invalid email or password.');
       error.statusCode = 401;
       return next(error);
     }

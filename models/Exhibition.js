@@ -7,6 +7,8 @@ const exhibitionSchema = new mongoose.Schema(
       required: [true, 'Exhibition name is required'],
       trim: true,
       minlength: [2, 'Exhibition name must be at least 2 characters'],
+      maxlength: [200, 'Exhibition name cannot exceed 200 characters'],
+      index: true,
     },
     startDate: {
       type: Date,
@@ -34,5 +36,8 @@ const exhibitionSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Production index for date range queries
+exhibitionSchema.index({ startDate: 1, endDate: 1 });
 
 module.exports = mongoose.model('Exhibition', exhibitionSchema);

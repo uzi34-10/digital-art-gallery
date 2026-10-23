@@ -1,77 +1,96 @@
-# Digital Art Gallery Management System
+# Digital Art Gallery Management System (Production-Ready)
 
-A comprehensive, production-ready Node.js REST API backend for managing a Digital Art Gallery. This project implements secure user authentication with JWT tokens, role-based authorization (Admin/User), password encryption, and a complete gallery management system.
+A comprehensive, production-grade Node.js REST API backend for managing a Digital Art Gallery. This project implements enterprise-level security, role-based authorization, rate limiting, MongoDB injection protection, Gzip compression, input validation across all routes, health checks, graceful shutdown, and containerization.
 
 ---
 
 ## Table of Contents
 
 - [Project Overview](#project-overview)
-- [Architecture](#architecture)
+- [Production Architecture](#production-architecture)
 - [Tech Stack](#tech-stack)
 - [Directory Structure](#directory-structure)
-- [Database Schema](#database-schema)
-- [Setup Instructions](#setup-instructions)
+- [Database Schema & Indexes](#database-schema--indexes)
+- [Production Security & Hardening](#production-security--hardening)
+- [Setup & Deployment Instructions](#setup--deployment-instructions)
+  - [Local Development](#local-development)
+  - [Docker & Docker Compose](#docker--docker-compose)
+  - [PM2 Process Management](#pm2-process-management)
 - [Environment Variables](#environment-variables)
-- [API Documentation](#api-documentation)
-- [Authentication & Authorization](#authentication--authorization)
-- [Validation Rules](#validation-rules)
-- [Error Handling](#error-handling)
-- [Challenges & Solutions](#challenges--solutions)
+- [API Documentation & Health Monitoring](#api-documentation--health-monitoring)
+- [Error Handling & Resilience](#error-handling--resilience)
 
 ---
 
 ## Project Overview
 
-**Digital Art Gallery Management System** is a robust REST API designed to efficiently manage artists, art collections, categories, and exhibitions. 
+**Digital Art Gallery Management System** is an enterprise-grade RESTful API designed to manage artists, art collections, categories, and exhibitions with top-tier performance, security, and uptime guarantees.
 
-### Key Features
-✅ **Secure User Authentication**: Registration and login using JWT tokens.  
-✅ **Role-Based Access Control**: Strict access control separating regular users and Administrators.  
-✅ **Password Security**: Password hashing using bcryptjs.  
-✅ **Input Validation**: Comprehensive request validation using express-validator.  
-✅ **Advanced Querying**: Built-in pagination, keyword searching, and filtering on Artworks.  
-✅ **MongoDB Integration**: Seamless connection via Mongoose with reference mapping and pre-save hooks.  
-✅ **Security Enhancements**: Implements security headers with Helmet and CORS management.  
+### Key Production Features
+✅ **Privilege Escalation Protection**: Prevents arbitrary users from registering as administrators without server-side authorization credentials.  
+✅ **Multi-Tier Rate Limiting**: Global rate limiting (200 req/15m) and strict authentication rate limiting (15 attempts/15m) to defend against DDoS and brute-force attacks.  
+✅ **NoSQL Injection Defense**: Recursive input sanitization stripping MongoDB operators (`$`, `.`) from request bodies, queries, and parameters.  
+✅ **Comprehensive Input Validation**: Built using `express-validator` on **all** endpoints (validating ObjectIDs, string boundaries, numerical ranges, and ISO dates).  
+✅ **High-Performance Compression**: Response compression via `compression` (Gzip/Deflate).  
+✅ **Production Health Monitoring**: Real-time `/health` endpoint reporting uptime, memory usage, and database state for AWS ALB, Nginx, Kubernetes, and Docker health checks.  
+✅ **Resilient Database Layer**: MongoDB connection pooling (`maxPoolSize: 10`, `minPoolSize: 2`), automatic reconnects, and graceful shutdown (handling SIGTERM/SIGINT signals).  
+✅ **Production Containerization**: Multi-stage `Dockerfile`, `docker-compose.yml`, and PM2 cluster configuration (`ecosystem.config.js`).  
 
 ---
 
-## Architecture
+## Production Architecture
 
-### MVC Architecture Pattern
+### Request Flow Pipeline
 
 ```text
-User Request
+Incoming HTTP Request (Reverse Proxy / Load Balancer)
     ↓
-Route (HTTP Method + Path)
+Trust Proxy & Security Headers (Helmet)
     ↓
-Middleware (Validation, JWT Auth, Role Auth)
+Gzip/Deflate Compression (compression)
+    ↓
+CORS Policy Check (cors)
+    ↓
+Request Payload Limits (10kb max body)
+    ↓
+Input Sanitization (Strip $ and . operators)
+    ↓
+Rate Limiter (apiLimiter / authLimiter)
+    ↓
+Router Matching (/api/auth, /api/artworks, etc.)
+    ↓
+Token Verification (JWT verifyToken)
+    ↓
+Role-Based Authorization (authorizeRole)
+    ↓
+Input Validator (express-validator rules)
     ↓
 Controller (Business Logic)
     ↓
-Model (Database Query & Mongoose Validation)
+Mongoose Model (Indexed MongoDB Query)
     ↓
-MongoDB Atlas Database
+MongoDB Atlas Cluster
     ↓
-Response (JSON)
+JSON Response
 ```
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **Runtime** | Node.js |
-| **Framework** | Express.js |
-| **Database** | MongoDB Atlas |
-| **ODM** | Mongoose |
-| **Authentication** | jsonwebtoken (JWT) |
-| **Password Security** | bcryptjs |
-| **Input Validation** | express-validator |
-| **Security Headers** | helmet, cors |
-| **Request Logging** | morgan |
-| **Dev Tool** | nodemon |
+| Layer | Technology | Version | Purpose |
+|-------|-----------|---------|---------|
+| **Runtime** | Node.js | v18+ | JavaScript runtime |
+| **Framework** | Express.js | 4.18.2 | REST API server |
+| **Database** | MongoDB Atlas | 7.x | Cloud NoSQL database |
+| **ODM** | Mongoose | 7.3.1 | Data modeling & connection pooling |
+| **Authentication** | jsonwebtoken | 9.0.0 | Stateless JWT auth |
+| **Password Security** | bcryptjs | 2.4.3 | Salted password hashing |
+| **Rate Limiting** | express-rate-limit | 8.7.1 | DDoS & brute-force defense |
+| **Security Headers** | helmet | 7.0.0 | CSP, HSTS, X-Frame headers |
+| **Compression** | compression | 1.8.2 | Response payload reduction |
+| **Validation** | express-validator | 7.0.1 | Strict schema validation |
+| **Process Management**| PM2 & Docker | - | Clustering & containerization |
 
 ---
 
@@ -79,218 +98,230 @@ Response (JSON)
 
 ```text
 gallery_management_system(backend)/
-├── server.js                 # Express app entry point
-├── package.json              # Project dependencies
-├── .env                      # Environment variables
+├── server.js                 # Production Express entry point (Graceful shutdown, healthcheck)
+├── package.json              # Dependencies & deployment scripts
+├── Dockerfile                # Multi-stage optimized Node.js Alpine image
+├── docker-compose.yml        # Container orchestration
+├── ecosystem.config.js       # PM2 cluster configuration
+├── .dockerignore             # Docker build ignores
+├── .env.example              # Documented environment template
+├── .env                      # Local environment configuration
 │
 ├── config/
-│   └── db.js                 # MongoDB connection setup
+│   ├── db.js                 # Resilient MongoDB connection with pooling & event listeners
+│   └── validateEnv.js        # Startup environment variable validation
 │
-├── models/                   # Mongoose schemas
-│   ├── User.js               # User schema (roles, passwords)
-│   ├── Artist.js             # Artist profiles
-│   ├── Artwork.js            # Artworks with refs to Artist/Category
-│   ├── Category.js           # Art categories
-│   └── Exhibition.js         # Exhibitions featuring Artworks
+├── middleware/
+│   ├── verifyToken.js        # JWT bearer authentication
+│   ├── authorizeRole.js      # Role-based access control
+│   ├── rateLimiter.js        # General & Auth rate limiters
+│   ├── sanitizeInput.js      # NoSQL injection sanitizer
+│   ├── validateRequest.js    # Express-validator error handler
+│   └── errorHandler.js       # Centralized production error handler
 │
-├── controllers/              # Business logic handlers
-│   ├── authController.js     # Login & Registration
-│   ├── artistController.js   # Artist management
-│   ├── artworkController.js  # Artwork management (with search)
+├── validators/
+│   ├── authValidator.js      # Register & login validation
+│   ├── artistValidator.js    # Artist endpoints validation
+│   ├── artworkValidator.js   # Artwork endpoints & query param validation
+│   ├── categoryValidator.js  # Category endpoints validation
+│   └── exhibitionValidator.js# Exhibition endpoints & date validation
+│
+├── models/
+│   ├── User.js               # User schema with bcrypt hooks
+│   ├── Artist.js             # Artist schema with indexed name
+│   ├── Artwork.js            # Artwork schema with compound indexes
+│   ├── Category.js           # Category schema with unique name
+│   └── Exhibition.js         # Exhibition schema with date indexes
+│
+├── controllers/
+│   ├── authController.js     # Protected registration & login
+│   ├── artistController.js   # Artist CRUD handlers
+│   ├── artworkController.js  # Artwork pagination, filter, search
 │   ├── categoryController.js # Category management
-│   └── exhibitionController.js # Exhibition management
+│   └── exhibitionController.js # Exhibition management & populates
 │
-├── routes/                   # API route definitions
-│   ├── authRoutes.js         # /api/auth endpoints
-│   ├── artistRoutes.js       # /api/artists endpoints
-│   ├── artworkRoutes.js      # /api/artworks endpoints
-│   ├── categoryRoutes.js     # /api/categories endpoints
-│   └── exhibitionRoutes.js   # /api/exhibitions endpoints
-│
-├── middlewares/              # Custom middleware
-│   ├── authMiddleware.js     # verifyToken & authorizeRole
-│   ├── validateRequest.js    # express-validator error handler
-│   └── errorHandler.js       # Global error handler
-│
-└── postman/
-    └── collection.json       # Pre-configured Postman requests
+└── routes/
+    ├── authRoutes.js         # /api/auth
+    ├── artistRoutes.js       # /api/artists
+    ├── artworkRoutes.js      # /api/artworks
+    ├── categoryRoutes.js     # /api/categories
+    └── exhibitionRoutes.js   # /api/exhibitions
 ```
 
 ---
 
-## Database Schema
+## Database Schema & Indexes
 
-### User Collection
-```javascript
-{
-  _id: ObjectId,
-  name: String,
-  email: String (unique),
-  password: String (hashed with bcrypt),
-  role: String (enum: ['user', 'admin'], default: 'user'),
-  createdAt: Date (auto-generated),
-  updatedAt: Date (auto-generated)
-}
-```
+To ensure high throughput and query performance under production load:
 
-### Artwork Collection
-```javascript
-{
-  _id: ObjectId,
-  title: String,
-  description: String,
-  price: Number,
-  artist: ObjectId (reference to Artist),
-  category: ObjectId (reference to Category),
-  image: String,
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-*(Additional schemas exist for Artists, Categories, and Exhibitions following the same relational pattern.)*
+- **Artwork Collection**:
+  - `{ title: 1 }`: Fast keyword lookups
+  - `{ category: 1, createdAt: -1 }`: Compound index for category filtering and reverse-chronological sorting
+  - `{ artistId: 1, createdAt: -1 }`: Compound index for artist portfolio listings
+- **Artist Collection**:
+  - `{ userId: 1 }` (unique): One-to-one artist profile mapping
+  - `{ artistName: 1 }`: Indexed artist name search
+- **Exhibition Collection**:
+  - `{ startDate: 1, endDate: 1 }`: Compound index for active/upcoming exhibition date queries
+- **User Collection**:
+  - `{ email: 1 }` (unique): Fast credential lookups
 
 ---
 
-## Setup Instructions
+## Production Security & Hardening
 
-### Prerequisites
-- Node.js (v14 or higher)
-- MongoDB Atlas Account (or local MongoDB)
+1. **Role Escalation Protection**:
+   Public registration (`POST /api/auth/register`) strictly defaults to `user` or `artist`. Supplying `role: "admin"` requires the `ADMIN_REGISTRATION_SECRET` or an authenticated administrator's token.
+2. **Brute-Force Rate Limiting**:
+   `/api/auth/*` routes are guarded by a dedicated `authLimiter` allowing max 15 requests per 15 minutes per IP.
+3. **NoSQL Injection Sanitization**:
+   All incoming keys matching `$` or containing `.` are stripped out before reaching Mongoose queries.
+4. **Information Disclosure Prevention**:
+   In production (`NODE_ENV=production`), error stack traces and internal database exceptions are never leaked to clients.
+5. **Payload Size Guard**:
+   JSON request payloads are capped at `10kb` to prevent memory exhaustion attacks.
 
-### Step 1: Clone or Open Repository
-Navigate to the project root directory in your terminal.
+---
 
-### Step 2: Install Dependencies
+## Setup & Deployment Instructions
+
+### Local Development
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Configure `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+3. Start in development mode (with nodemon):
+   ```bash
+   npm run dev
+   ```
+
+### Docker Deployment
+
+To build and run the production Docker container:
+
 ```bash
-npm install
+# Build the container image
+docker build -t gallery-backend .
+
+# Run container with environment configuration
+docker run -d -p 5000:5000 --env-file .env --name gallery-api gallery-backend
 ```
 
-### Step 3: Configure Environment Variables
-Create a `.env` file in the root directory and add your connection strings (see section below).
-
-### Step 4: Start the Server
+Or using Docker Compose:
 ```bash
-npm run dev
+docker-compose up -d --build
 ```
 
-Expected output:
-```text
-[nodemon] starting `node server.js`
-Server running on port 5000
-MongoDB Connected: ac-wym8zvm-shard-00-00.ks8r6iw.mongodb.net
+### PM2 Cluster Deployment (Bare Metal / VM)
+
+To deploy across all CPU cores with automatic restart and log rotation:
+
+```bash
+# Install PM2 globally
+npm install -g pm2
+
+# Start cluster mode
+npm run pm2:start
+
+# Check cluster logs and monitoring
+npm run pm2:logs
+pm2 monit
 ```
 
 ---
 
 ## Environment Variables
 
-Create a `.env` file with the following variables:
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | No | `5000` | Express server port |
+| `NODE_ENV` | No | `development` | Environment mode (`development` or `production`) |
+| `MONGO_URI` | **Yes** | - | MongoDB Atlas connection string |
+| `JWT_SECRET` | **Yes** | - | 256-bit secret key for JWT signing |
+| `JWT_EXPIRES_IN` | No | `7d` | Token expiration duration |
+| `CORS_ORIGIN` | No | `*` | Allowed CORS origins (e.g. `https://myfrontend.com`) |
+| `ADMIN_REGISTRATION_SECRET` | No | - | Passphrase required to register admin accounts |
 
-```env
-PORT=5000
-MONGO_URI=mongodb://username:password@shard.mongodb.net:27017/gallery?ssl=true&replicaSet=atlas-g05oll-shard-0&authSource=admin&retryWrites=true&w=majority
-JWT_SECRET=your_very_strong_secret_key_here
-JWT_EXPIRES_IN=7d
-NODE_ENV=development
+---
+
+## API Documentation & Health Monitoring
+
+### Health & Monitoring Endpoints
+
+- `GET /health` or `GET /api/health`
+  - Returns `200 OK` when healthy, or `503 Service Unavailable` when degraded.
+  - Response:
+    ```json
+    {
+      "status": "ok",
+      "uptime": "1420s",
+      "timestamp": "2026-10-23T06:00:00.000Z",
+      "environment": "production",
+      "database": { "status": "connected" },
+      "memory": { "rss": "72.50 MB", "heapUsed": "24.10 MB" }
+    }
+    ```
+- `GET /api`
+  - Root API summary and status.
+
+### Core Resource Endpoints
+
+- **Auth**:
+  - `POST /api/auth/register` (rate-limited, validated)
+  - `POST /api/auth/login` (rate-limited, validated)
+- **Categories**:
+  - `GET /api/categories`
+  - `POST /api/categories` (Admin required)
+  - `PUT /api/categories/:id` (Admin required)
+  - `DELETE /api/categories/:id` (Admin required)
+- **Artists**:
+  - `GET /api/artists`
+  - `GET /api/artists/:id`
+  - `POST /api/artists` (Admin/Artist)
+  - `PUT /api/artists/:id` (Admin/Artist)
+  - `DELETE /api/artists/:id` (Admin)
+- **Artworks**:
+  - `GET /api/artworks?page=1&limit=10&search=keyword&category=id`
+  - `GET /api/artworks/:id`
+  - `POST /api/artworks` (Admin/Artist)
+  - `PUT /api/artworks/:id` (Admin/Artist)
+  - `DELETE /api/artworks/:id` (Admin)
+- **Exhibitions**:
+  - `GET /api/exhibitions`
+  - `POST /api/exhibitions` (Admin)
+  - `PUT /api/exhibitions/:id` (Admin)
+  - `DELETE /api/exhibitions/:id` (Admin)
+
+---
+
+## Error Handling & Resilience
+
+The API returns consistent error payloads matching this format:
+
+```json
+{
+  "success": false,
+  "message": "Human-readable description of error",
+  "errors": [
+    { "field": "title", "message": "Title is required." }
+  ]
+}
 ```
 
----
-
-## API Documentation
-
-### Base URL: `http://localhost:5000/api`
-
-### 1. Authentication
-- `POST /auth/register` - Register a new user
-- `POST /auth/login` - Login and receive a JWT token
-
-### 2. Categories
-- `POST /categories` - Create a category **(Requires Admin token)**
-- `GET /categories` - Retrieve all categories
-
-### 3. Artists
-- `POST /artists` - Create an artist **(Requires Admin token)**
-- `GET /artists` - Retrieve all artists
-
-### 4. Artworks
-- `POST /artworks` - Create an artwork **(Requires Admin token)**
-- `GET /artworks` - Retrieve all artworks
-  - Supports query parameters: `?page=1&limit=10&search=sunset&category=<categoryId>`
-
-### 5. Exhibitions
-- `POST /exhibitions` - Create an exhibition
-- `GET /exhibitions` - Retrieve all exhibitions
-
----
-
-## Authentication & Authorization
-
-### Middleware: `verifyToken`
-Located in `middlewares/authMiddleware.js`, this protects routes by:
-1. Extracting the `Authorization: Bearer <token>` header.
-2. Verifying the JWT signature against the `JWT_SECRET`.
-3. Attaching the decoded user payload to `req.user`.
-4. Rejecting invalid, missing, or expired tokens with a `401 Unauthorized` status.
-
-### Middleware: `authorizeRole`
-Protects sensitive routes (e.g., creating categories) by:
-1. Checking if `req.user.role` matches the permitted roles (e.g., `admin`).
-2. Rejecting the request with a `403 Forbidden` status if the user lacks the proper role.
-
----
-
-## Validation Rules
-
-Requests are strictly validated using `express-validator`.
-
-**Example: User Registration Validation**
-- `email`: Must be a valid email format.
-- `password`: Must be a minimum of 6 characters long.
-- `name`: Cannot be empty.
-- `role`: Must be either 'user' or 'admin'.
-
-If validation fails, the API responds with a `400 Bad Request` and an array detailing the exact validation errors.
-
----
-
-## Error Handling
-
-The application implements a centralized error handling middleware (`errorHandler.js`) to provide consistent API responses.
-
-| Code | Meaning | Example Scenario |
-|------|---------|------------------|
-| **200** | OK | Successful GET request or Login |
-| **201** | Created | Successfully created a new database document |
-| **400** | Bad Request | Validation failure or invalid Object IDs |
-| **401** | Unauthorized | Missing or invalid JWT Token |
-| **403** | Forbidden | Valid token but insufficient role privileges (Not an Admin) |
-| **404** | Not Found | Requested endpoint or database resource doesn't exist |
-| **500** | Server Error | Unhandled backend exception |
-
----
-
-## Challenges & Solutions
-
-During development, complex networking issues were resolved to ensure seamless connection to MongoDB Atlas:
-
-1. **SRV DNS Resolution Failure (`ECONNREFUSED`)**
-   - **Cause**: Network VPN/DNS actively blocked the `_mongodb._tcp` SRV lookup.
-   - **Solution**: Bypassed SRV lookup by converting the connection string to a direct `mongodb://` URI with hardcoded node hostnames.
-
-2. **Replica Set Authentication**
-   - **Cause**: The direct URI strictly requires the correct replica set name, which is normally handled automatically by SRV.
-   - **Solution**: Manually queried the cluster's DNS TXT record via Google DNS (`Resolve-DnsName -Server 8.8.8.8`) to extract the exact replica set name (`atlas-g05oll-shard-0`).
-
-3. **Connection Reset (`ECONNRESET`)**
-   - **Cause**: The Atlas free-tier (M0) cluster automatically paused due to inactivity, causing successful TCP connections to be immediately dropped.
-   - **Solution**: Resumed the cluster directly via the MongoDB Atlas web dashboard.
-
-4. **IP Whitelisting Restrictions**
-   - **Cause**: VPN IP addresses were being rejected by MongoDB Atlas network filters.
-   - **Solution**: Explicitly allowed access from anywhere (`0.0.0.0/0`) within the Atlas Network Access panel.
-
----
-
-## Author
-Developed as a production-ready, highly secure API backend for digital art management.
+| HTTP Status | Meaning |
+|-------------|---------|
+| `200` | Successful request |
+| `201` | Resource successfully created |
+| `400` | Validation failure or malformed ObjectId |
+| `401` | Missing, malformed, or expired JWT |
+| `403` | Forbidden / unauthorized role privilege |
+| `404` | Resource or route not found |
+| `409` | Conflict (e.g. duplicate email or category name) |
+| `429` | Rate limit exceeded |
+| `500` | Internal server error (masked in production) |
+| `503` | Database temporarily degraded or unavailable |

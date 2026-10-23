@@ -7,11 +7,14 @@ const artistSchema = new mongoose.Schema(
       required: [true, 'Artist name is required'],
       trim: true,
       minlength: [2, 'Artist name must be at least 2 characters'],
+      maxlength: [100, 'Artist name cannot exceed 100 characters'],
+      index: true,
     },
     specialization: {
       type: String,
       required: [true, 'Specialization is required'],
       trim: true,
+      maxlength: [100, 'Specialization cannot exceed 100 characters'],
     },
     bio: {
       type: String,
